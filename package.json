@@ -1,0 +1,18 @@
+{
+  "name": "duplicator",
+  "version": "0.0.0",
+  "description": "Duplicate HTTP traffic to another host for testing",
+  "main": "index.js",
+  "scripts": {
+    "test": "make test"
+  },
+  "repository": "",
+  "keywords": [
+    "http",
+    "duplicate",
+    "mirror",
+    "load"
+  ],
+  "author": "Isaac Wolkerstorfer <i@agnoster.net> (http://agnoster.net/)",
+  "license": "MIT"
+}
