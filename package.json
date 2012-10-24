@@ -1,11 +1,12 @@
 {
   "name": "duplicator",
   "version": "0.0.0",
-  "description": "HTTP proxy that duplicates traffic to other host for testing",
+  "description": "TCP proxy that duplicates traffic to other host for testing",
   "main": "index.js",
   "scripts": {
     "test": "make test"
   },
+  "bin": "bin/duplicator",
   "repository": "",
   "keywords": [
     "http",
@@ -16,7 +17,7 @@
   "author": "Isaac Wolkerstorfer <i@agnoster.net> (http://agnoster.net/)",
   "license": "MIT",
   "dependencies": {
-    "bouncy": "~1.3.1"
+    "optimist": "~0.3.5"
   },
   "devDependencies": {
     "tap": "~0.3.1"

@@ -1,0 +1,59 @@
+#!/usr/bin/env node
+// vim: set ft=javascript:
+
+var duplicator = require('../')
+var opts = require('optimist')
+    .usage('Usage: $0 -p [port] -f [host:port] -d [host:port] -r [int]')
+    .options('p',
+      { alias: 'port'
+      , describe: 'port to listen on'
+      , 'default': process.env['PORT']
+      , demand: true
+      })
+    .options('f',
+      { alias: 'forward'
+      , describe: 'host to forward to'
+      , demand: true
+      })
+    .options('d',
+      { alias: 'duplicate'
+      , describe: 'host to duplicate to'
+      })
+    .options('r',
+      { alias: 'rate'
+      , describe: 'rate to sample traffic'
+      , 'default': 1
+      })
+    .options('h',
+      { alias: 'help'
+      , describe: 'show usage information'
+      })
+    .options('v',
+      { alias: 'version'
+      , describe: 'show version information'
+      })
+  , argv = opts.argv
+
+if (argv.h) {
+  opts.showHelp()
+  process.exit()
+}
+
+if (argv.v) {
+  console.log(duplicator.version)
+  process.exit()
+}
+
+function serverInfo() {
+  console.log("Listening on port:", argv.p)
+  if (argv.f) console.log("Forwarding to:", argv.f)
+  if (argv.d) console.log("Duplicating to:", argv.d)
+  if (argv.r) console.log("Sample rate:", argv.r)
+}
+
+var server = duplicator()
+
+if (argv.f) server.forward(argv.f)
+if (argv.d) server.duplicate(argv.d, argv.r)
+
+server.listen(argv.p, serverInfo)
