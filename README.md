@@ -1,4 +1,4 @@
-# duplicator
+# duplicator [![build status](https://secure.travis-ci.org/agnoster/duplicator.png?branch=master)](http://travis-ci.org/agnoster/duplicator)
 
 > TCP proxy that duplicates traffic to other host for testing
 
