@@ -1,4 +1,5 @@
 var net = require('net')
+  , BufferedStream = require('./lib/buffered-stream')
 
 // Return a function that behaves like a net.connect to a given host
 function makeConnect(host) {
@@ -30,14 +31,24 @@ function duplicator(cb) {
   var forwardHost, duplicateHost, sampleRate
 
   function duplicate(connection) {
+    var buffer = new BufferedStream
+    buffer.pause()
+    connection.pipe(buffer)
+
     var duplicateConnection = duplicateHost(function() {
-      connection.pipe(duplicateConnection)
+      buffer.pipe(duplicateConnection)
+      buffer.resume()
     })
   }
 
   function forward(connection) {
+    var buffer = new BufferedStream
+    buffer.pause()
+    connection.pipe(buffer)
+
     var forwardConnection = forwardHost(function() {
-      connection.pipe(forwardConnection)
+      buffer.pipe(forwardConnection)
+      buffer.resume()
       forwardConnection.pipe(connection)
     })
   }

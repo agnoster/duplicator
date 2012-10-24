@@ -16,25 +16,30 @@ function makeServer(connect, fn) {
 
 test('duplicator', function (t) {
 
-  var origin = makeServer(connect, function (req, res) {
+  var origin = makeServer(onConnect, function (req, res) {
+    // delay origin response so sink has a chance to interfere
+    res.statusCode = 201
     res.setHeader('content-type', 'text/plain')
     res.end('hello world')
   })
 
-  var sink = makeServer(connect, function (req, res) {
-    sink.log.push(req)
+  var log = []
+  var sink = makeServer(onConnect, function (req, res) {
+    log.push(req.url)
+    res.statusCode = 404
+    res.setHeader('content-type', 'text/html')
+    res.end('PAY NO ATTENTION TO ME')
   })
-  sink.log = []
 
-  var proxy = makeServer(connect, function (req, res) {
-    var stream = net.createConnection(origin.port)
-    bounce(stream)
-  })
+  var proxy = duplicator()
+    .forward({ port: origin.port })
+    .duplicate({ port: sink.port })
+  proxy.listen(proxy.port = randomPort(), onConnect)
 
   var servers = [origin, sink, proxy]
-
   var connected = 0
-  function connect () {
+
+  function onConnect () {
     if (++connected < servers.length) return
 
     var opts = {
@@ -45,11 +50,18 @@ test('duplicator', function (t) {
     }
 
     var req = http.request(opts, function (res) {
-      t.equal(res.statusCode, 200)
-      t.equal(res.headers['content-type'], 'text/plain')
+      t.equal(res.statusCode, 201, "got status code from origin")
+      t.equal(res.headers['content-type'], 'text/plain', "got content-type from origin")
+
+      var buffer = ''
+      res.on('data', function(data) {
+        buffer += data
+      })
 
       res.on('end', function () {
-        t.equal(sink.log, [])
+        t.equal(buffer, 'hello world', "got body from origin")
+        t.equal(log.length, 1, "sink intercepted a message")
+        t.equal(log[0], '/beep', "sink got the right message")
         servers.forEach(function(server){
           server.close()
         })
