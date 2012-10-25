@@ -26,4 +26,17 @@ require('duplicator')()
   .listen(8080)
 ```
 
+Alternatively, if you're more the manual transmission type, `duplicator` creates a pretty standard `net.Server`. You can pass a connection callback, and it will also receive function to forward and duplicate connections.
+
+```js
+var duplicator = require('duplicator')
+
+var server = duplicator(function(connection, forward, duplicate){
+  forward(connection, { host: 'localhost', port: 80 })
+  duplicate(connection, { host: 'localhost', port: 3000 })
+}).listen(8080)
+```
+
+This allows you to be more specific about how you want to forward/duplicate connections. You could even load-balance either one, or only duplicate a certain number of requests per minute, or whatever.
+
 # mit license

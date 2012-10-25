@@ -9,74 +9,148 @@ function makeConnect(host) {
 }
 
 function parseHost(host) {
-  if ('number' === typeof host) {
-    return makeConnect(host)
-  }
-  if ('string' === typeof host) {
-    var match = host.match(/(.*)(:(\d+))/)
-    if (match) {
+  switch(typeof host) {
+    case 'function':
+      return host
+    case 'number':
+      return makeConnect(host)
+    case 'string':
+      // match will always succeed
+      var match = host.match(/(.*)(:(\d+))?/)
       host = { host: match[1] }
       if (match[2]) host.port = parseInt(match[3], 10)
       return makeConnect(host)
-    }
+    case 'object':
+      return makeConnect(host)
+    default:
+      return host
   }
-  if ('object' === typeof host) {
-    return makeConnect(host)
-  }
-  return host
 }
 
+/**
+ * Public: Create a new net.Server that can forward and duplicate incoming
+ * connections.
+ *
+ * A server returned from duplicator() has two special methods:
+ *
+ * server.forward(host) - forward all traffic to host
+ * server.duplicate(host, [rate]) - duplicate traffic to host at the given rate
+ *
+ * See below for how they work
+ */
 function duplicator(cb) {
 
   var forwardHost, duplicateHost, sampleRate
 
-  function duplicate(connection) {
+  /**
+   * Internal: Connect to the given host, call the callback with the connection
+   * if successful.
+   */
+  function connect(host, cb) {
+    host = parseHost(host)
+
+    var connection = host(function() {
+      cb(null, connection)
+    })
+
+    connection.on('error', function(err) {
+      cb(err)
+    })
+  }
+
+  /**
+   * Internal: Duplicate the client to the host
+   */
+  function duplicate(client, host) {
+    // Create a paused BufferedStream and pipe the client in, so we don't
+    // miss any events
     var buffer = new BufferedStream
     buffer.pause()
-    connection.pipe(buffer)
+    client.pipe(buffer)
 
-    var duplicateConnection = duplicateHost(function() {
-      buffer.pipe(duplicateConnection)
+    // Connect to the duplicate host and pipe the buffer into it, discarding
+    // the response
+    connect(host, function(err, connection) {
+      // Silently ignore errors duplicating the connection.
+      if (err) return
+
+      buffer.pipe(connection)
       buffer.resume()
     })
   }
 
-  function forward(connection) {
+  /**
+   * Internal: Forward the client to the host
+   */
+  function forward(client, host) {
+    // Create a paused BufferedStream and pipe the client in, so we don't
+    // miss any events
     var buffer = new BufferedStream
     buffer.pause()
-    connection.pipe(buffer)
+    client.pipe(buffer)
 
-    var forwardConnection = forwardHost(function() {
-      buffer.pipe(forwardConnection)
+    // Connect to the forwardHost and pipe the buffer into it, piping the
+    // response back to the original connection
+    connect(host, function(err, connection) {
+      // 
+      if (err) {
+        console.error("Error forwarding connection:", err)
+        return
+      }
+      buffer.pipe(connection)
       buffer.resume()
-      forwardConnection.pipe(connection)
+      connection.pipe(client)
     })
   }
 
-  function handler(connection) {
+  /**
+   * Internal: Handle an incoming connection from a client
+   */
+  function onConnect(client) {
     // if the user defined a callback, call that
-    cb && cb(connection)
+    cb && cb(client, forward, duplicate)
 
     // forward to the forwardHost
-    if (forwardHost) forward(connection)
+    if (forwardHost) forward(client, forwardHost)
 
     // duplicate traffic to the duplicateHost
     if (duplicateHost) {
       var rate = sampleRate
       while (rate > 0) {
-        if (Math.random() < rate) duplicate(connection)
+        if (Math.random() < rate) duplicate(client, duplicateHost)
         rate--
       }
     }
   }
 
-  var server = net.createServer(handler)
+  var server = net.createServer(onConnect)
 
+  /**
+   * Public: specify a host to forward all connections to
+   *
+   * host - specify a host to forward to be parsed by parseHost
+   *
+   * Returns the server for chaining
+   */
   server.forward = function(host) {
     forwardHost = parseHost(host)
     return this
   }
 
+  /**
+   * Public: specify a host to forward all connections to
+   *
+   * host - specify a host to forward to be parsed by parseHost
+   * rate - number of requests to duplicate per incoming request
+   *        0   - duplicate no requests
+   *        1   - duplicate each request once
+   *        0.1 - duplicate 10% of incoming requests
+   *        5   - send out 5 duplicates for each incoming request
+   *        2.5 - send out 2 duplicates for each incoming request, with a 50%
+   *              chance of sending out a third copy
+   *
+   * Returns the server for chaining
+   */
   server.duplicate = function(host, rate) {
     duplicateHost = parseHost(host)
     sampleRate = rate || sampleRate || 1
@@ -86,6 +160,10 @@ function duplicator(cb) {
   return server
 }
 
+/**
+ * Internal: Returns the version by parsing the package.json file. Memoize the
+ * result, as this should never change during a running process.
+ */
 function getVersion() {
   if (!getVersion.v) {
     var packageFile = require('path').resolve(__filename, '../package.json')
@@ -94,6 +172,9 @@ function getVersion() {
   return getVersion.v
 }
 
+/**
+ * Public: duplicator.version returns the version of the package
+ */
 duplicator.__defineGetter__('version', getVersion)
 
 module.exports = duplicator
