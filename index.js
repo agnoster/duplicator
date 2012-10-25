@@ -49,16 +49,10 @@ function parseHost(host) {
  * Public: Create a new net.Server that can forward and duplicate incoming
  * connections.
  *
- * A server returned from duplicator() has two special methods:
- *
- * server.forward(host) - forward all traffic to host
- * server.duplicate(host, [rate]) - duplicate traffic to host at the given rate
- *
- * See below for how they work
+ * The connection handler will receive (in addition to the connection) two
+ * special function, `forward` and `duplicate`. See below for how they work.
  */
 function duplicator(cb) {
-
-  var forwardHost, duplicateHost, sampleRate
 
   /**
    * Internal: Connect to the given host, call the callback with the connection
@@ -98,8 +92,8 @@ function duplicator(cb) {
     connect(host, function(err, connection) {
       if (err) {
         if (forwardResponse) console.error(ERR_MSG.FWD_CONN_ERROR, err)
-        buffer.close()
-        client.close()
+        buffer.end()
+        client.end()
         return
       }
       if (forwardResponse) connection.pipe(client)
@@ -150,55 +144,15 @@ function duplicator(cb) {
       }
 
       stream = stream || client
-      for (; rate >= 1; rate--) pipe(stream, duplicateHost)
-      if (Math.random() < rate) pipe(stream, duplicateHost)
+      for (; rate >= 1; rate--) pipe(stream, host)
+      if (Math.random() < rate) pipe(stream, host)
     }
 
     // if the user defined a callback, call that
     cb && cb(client, forward, duplicate)
-
-    // forward to the forwardHost
-    if (forwardHost) forward(forwardHost)
-
-    // duplicate traffic to the duplicateHost
-    if (duplicateHost) duplicate(duplicateHost, sampleRate)
   }
 
-  var server = net.createServer(onConnect)
-
-  /**
-   * Public: specify a host to forward all connections to
-   *
-   * host - specify a host to forward to be parsed by parseHost
-   *
-   * Returns the server for chaining
-   */
-  server.forward = function(host) {
-    forwardHost = parseHost(host)
-    return this
-  }
-
-  /**
-   * Public: specify a host to forward all connections to
-   *
-   * host - specify a host to forward to be parsed by parseHost
-   * rate - number of requests to duplicate per incoming request
-   *        0   - duplicate no requests
-   *        1   - duplicate each request once
-   *        0.1 - duplicate 10% of incoming requests
-   *        5   - send out 5 duplicates for each incoming request
-   *        2.5 - send out 2 duplicates for each incoming request, with a 50%
-   *              chance of sending out a third copy
-   *
-   * Returns the server for chaining
-   */
-  server.duplicate = function(host, rate) {
-    duplicateHost = parseHost(host)
-    sampleRate = rate || sampleRate || 1
-    return this
-  }
-
-  return server
+  return net.createServer(onConnect)
 }
 
 /**

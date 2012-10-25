@@ -51,9 +51,7 @@ function serverInfo() {
   if (argv.r) console.log("Sample rate:", argv.r)
 }
 
-var server = duplicator()
-
-if (argv.f) server.forward(argv.f)
-if (argv.d) server.duplicate(argv.d, argv.r)
-
-server.listen(argv.p, serverInfo)
+var server = duplicator(function(client, forward, duplicate) {
+  if (argv.f) forward(argv.f)
+  if (argv.d) duplicate(argv.d, argv.r)
+}).listen(argv.p, serverInfo)

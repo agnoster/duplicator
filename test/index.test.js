@@ -31,9 +31,10 @@ test('duplicator', function (t) {
     res.end('PAY NO ATTENTION TO ME')
   })
 
-  var proxy = duplicator()
-    .forward({ port: origin.port })
-    .duplicate({ port: sink.port })
+  var proxy = duplicator(function(connection, forward, duplicate) {
+    forward(origin.port)
+    duplicate(sink.port)
+  })
   proxy.listen(proxy.port = randomPort(), onConnect)
 
   var servers = [origin, sink, proxy]
