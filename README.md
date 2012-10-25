@@ -1,6 +1,6 @@
 # duplicator [![build status](https://secure.travis-ci.org/agnoster/duplicator.png?branch=master)](http://travis-ci.org/agnoster/duplicator)
 
-> TCP proxy that duplicates traffic to other host for testing
+> TCP proxy that also duplicates traffic to a secondary host
 
 I built this because I needed a way to "tap" production traffic and shoot it at a new system to see how it handles load.
 
@@ -45,12 +45,52 @@ This allows you to be more specific about how you want to forward/duplicate conn
 
 Creates a new `net.Server` with two special properties:
 
-* when `cb` is called on a successful connection, it will receive the connection to the client and two special functions, `forward` and `duplicate` (more on those below)
-* two extra methods on the server: `forward` and `duplicate`, mirroring the behavior of the functions
+* when `cb` is called on a successful connection, it will receive the connection to the client and two special callback functions, `forward` and `duplicate` (more on those below)
+* two extra methods on the server, `forward` and `duplicate`, which cause the server to automatically invoke the corresponding callback function on every connection
+
+In general, you should only use either the callbacks or the methods. However, you can combine them:
+
+```js
+duplicator(function(connection, forward, duplicate){
+  var host = (Math.random() < 0.5) ? 'host1:80' : 'host2:80'
+  duplicate(host)
+}).forward('origin:80')
+```
+
+In this example, we always use `origin:80` as the primary server to forward requests to, but we send half the duplicated rquests to `host1`, and the other half to `host2`.
 
 ## callback: forward(host, [stream])
 
 Forward `stream` to `host`. `stream` defaults to the current connection unless otherwise specified.
+
+```js
+duplicator(function(connection, forward, duplicate){
+  // forward every connection to localhost:80
+  forward('localhost:80')
+})
+```
+
+Note that it is *not* safe to call `forward` multiple times on a connection, as the responses from the different servers may interfere with one another. Therefore if you do call `forward` multiple times, only the first will succeed, and subsequent calls will merely duplicate the connection.
+
+## server.forward(host)
+
+Convenience method to tell the server to call `forward(host)` on every connection.
+
+```js
+// forward every connection to localhost:80
+duplicator().forward('localhost:80')
+```
+
+With `server.forward`, multiple calls will simply overwrite the previous forwarding server. This means you can actually change the forward server at runtime.
+
+```js
+var count = 0
+var server = duplicator(function() {
+  if (++count > 1000) server.forward('secondary:3000')
+}).forward('primary:80')
+```
+
+This would forward to `primary` for the first 1000 requests, then switch to `secondary`.
 
 ## callback: duplicate(host, [stream], [rate])
 
@@ -64,18 +104,27 @@ Rate is the *expected* number of copies sent per connection, and is interpreted 
 
 Note that both `stream` and `rate` are optional, but have sensible defaults. If only two parameters are specified, the second will be interpreted as `rate` if it's a number, `stream` otherwise.
 
-## server.forward(host)
-
-Convenience method to tell the server to call `forward(host)` on every connection.
+```js
+duplicator(function(connection, forward, duplicate){
+  // duplicate 50% of requests to localhost:3000
+  duplicate('localhost:3000', 0.5)
+})
+```
 
 ## server.duplicate(host, [rate])
 
 Convenience method to tell the server to call `duplicate(host, rate)` on every connection.
 
+```js
+// duplicate 50% of requests to localhost:3000
+duplicator().duplicate('localhost:3000', 0.5)
+```
+
+As with `server.forward`, the last call sets the destination.
 
 ## specifying hosts
 
-A host can be either:
+A host can be any one of:
 
 * an object as `net.connect` would expect it (`{ host: 'google.com', port: 80 }`)
 * a number representing a port (`80`, `3000`), host is implied to be `localhost`

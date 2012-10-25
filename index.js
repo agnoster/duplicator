@@ -1,6 +1,14 @@
 var net = require('net')
   , BufferedStream = require('morestreams').BufferedStream
 
+var ERR_MSG =
+  { MULTIPLE_FWD:
+    "Cowardly refusing to forward a connection to multiple destinations. " +
+    "Using `duplicate` instead."
+  , FWD_CONN_ERROR:
+    "Error connection to forward host:"
+  }
+
 /**
  * Internal: Return a function that behaves like a net.connect to a given host
  */
@@ -26,10 +34,9 @@ function parseHost(host) {
     case 'number':
       return makeConnect(host)
     case 'string':
-      // match will always succeed
-      var match = host.match(/(.*)(:(\d+))?/)
-      host = { host: match[1] }
-      if (match[2]) host.port = parseInt(match[3], 10)
+      var parts = host.split(':')
+      host = { host: parts[0] }
+      if (parts[1]) host.port = parseInt(parts[1], 10)
       return makeConnect(host)
     case 'object':
       return makeConnect(host)
@@ -90,7 +97,7 @@ function duplicator(cb) {
     // back to the original connection if forwardResponse is truthy
     connect(host, function(err, connection) {
       if (err) {
-        if (forwardResponse) console.error("Error forwarding connection:", err)
+        if (forwardResponse) console.error(ERR_MSG.FWD_CONN_ERROR, err)
         buffer.close()
         client.close()
         return
@@ -105,6 +112,10 @@ function duplicator(cb) {
    * Internal: Handle an incoming connection from a client
    */
   function onConnect(client) {
+
+    // Has this connection already been forwarded?
+    var wasConnectionForwarded = false
+
     /**
      * Public: Forward the stream to a host, sending the response back to the
      * stream
@@ -113,7 +124,12 @@ function duplicator(cb) {
      * stream - a stream to forward, defaults to the incoming client connection
      */
     function forward(host, stream) {
-      pipe(stream || client, host, true)
+      if (wasConnectionForwarded) {
+        console.error(ERR_MSG.MULTIPLE_FWD)
+        pipe(stream || client, host, false)
+      } else {
+        pipe(stream || client, host, wasConnectionForwarded = true)
+      }
     }
 
     /**
