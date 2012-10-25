@@ -70,47 +70,34 @@ function duplicator(cb) {
   }
 
   /**
-   * Internal: Duplicate the client to the host
+   * Internal: Pipe the client to a new host
+   *
+   * client          - a net.Socket stream
+   * host            - something that parseHost can understand
+   * forwardResponse - bool, do we forward the response from the host to the
+   *                   client?
+   *
+   * Returns nothing
    */
-  function duplicate(client, host) {
+  function pipe(client, host, forwardResponse) {
     // Create a paused BufferedStream and pipe the client in, so we don't
     // miss any events
     var buffer = new BufferedStream
     buffer.pause()
     client.pipe(buffer)
 
-    // Connect to the duplicate host and pipe the buffer into it, discarding
-    // the response
+    // Connect to the host and pipe the buffer into it, piping the response
+    // back to the original connection if forwardResponse is truthy
     connect(host, function(err, connection) {
-      // Silently ignore errors duplicating the connection.
-      if (err) return
-
-      buffer.pipe(connection)
-      buffer.resume()
-    })
-  }
-
-  /**
-   * Internal: Forward the client to the host
-   */
-  function forward(client, host) {
-    // Create a paused BufferedStream and pipe the client in, so we don't
-    // miss any events
-    var buffer = new BufferedStream
-    buffer.pause()
-    client.pipe(buffer)
-
-    // Connect to the forwardHost and pipe the buffer into it, piping the
-    // response back to the original connection
-    connect(host, function(err, connection) {
-      // 
       if (err) {
-        console.error("Error forwarding connection:", err)
+        if (forwardResponse) console.error("Error forwarding connection:", err)
+        buffer.close()
+        client.close()
         return
       }
+      if (forwardResponse) connection.pipe(client)
       buffer.pipe(connection)
       buffer.resume()
-      connection.pipe(client)
     })
   }
 
@@ -118,20 +105,47 @@ function duplicator(cb) {
    * Internal: Handle an incoming connection from a client
    */
   function onConnect(client) {
+    /**
+     * Public: Forward the stream to a host, sending the response back to the
+     * stream
+     *
+     * host   - a host that parseHost can understand
+     * stream - a stream to forward, defaults to the incoming client connection
+     */
+    function forward(host, stream) {
+      pipe(stream || client, host, true)
+    }
+
+    /**
+     * Public: Duplicate the stream to a host, ignoring the response
+     *
+     * host   - a host that parseHost can understand
+     * stream - a stream to forward, defaults to the incoming client connection
+     * rate   - how many times should each connection be duplicated on average
+     */
+    function duplicate(host, stream, rate) {
+      if (typeof rate === 'undefined') {
+        if (typeof stream === 'number') {
+          rate = stream
+          stream = null
+        } else {
+          rate = 1
+        }
+      }
+
+      stream = stream || client
+      for (; rate >= 1; rate--) pipe(stream, duplicateHost)
+      if (Math.random() < rate) pipe(stream, duplicateHost)
+    }
+
     // if the user defined a callback, call that
     cb && cb(client, forward, duplicate)
 
     // forward to the forwardHost
-    if (forwardHost) forward(client, forwardHost)
+    if (forwardHost) forward(forwardHost)
 
     // duplicate traffic to the duplicateHost
-    if (duplicateHost) {
-      var rate = sampleRate
-      while (rate > 0) {
-        if (Math.random() < rate) duplicate(client, duplicateHost)
-        rate--
-      }
-    }
+    if (duplicateHost) duplicate(duplicateHost, sampleRate)
   }
 
   var server = net.createServer(onConnect)
