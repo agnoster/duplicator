@@ -1,5 +1,5 @@
 var net = require('net')
-  , BufferedStream = require('./lib/buffered-stream')
+  , BufferedStream = require('morestreams').BufferedStream
 
 // Return a function that behaves like a net.connect to a given host
 function makeConnect(host) {

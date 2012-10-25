@@ -17,7 +17,8 @@
   "author": "Isaac Wolkerstorfer <i@agnoster.net> (http://agnoster.net/)",
   "license": "MIT",
   "dependencies": {
-    "optimist": "~0.3.5"
+    "optimist": "~0.3.5",
+    "morestreams": "~0.1.1"
   },
   "devDependencies": {
     "tap": "~0.3.1"
