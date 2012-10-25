@@ -11,9 +11,9 @@ npm install -g duplicator
 duplicator -f localhost:80 -d localhost:3000 -p 8080
 ```
 
-* forward all traffic to localhost:80
-* duplicate all traffic to localhost:3000, ignoring responses
-* listen on port 8080
+* forward all traffic to `localhost:80`
+* duplicate all traffic to `localhost:3000`, ignoring responses
+* listen on port `8080`
 
 # usage (code)
 
@@ -39,7 +39,7 @@ var server = duplicator(function(connection, forward, duplicate){
 }).listen(8080)
 ```
 
-This allows you to be more specific about how you want to forward/duplicate connections. You could even load-balance either one, or only duplicate a certain number of requests per minute, or whatever. Note, however, that all calls to `forward` or `duplicate` **must** be called in the same tick, or data could be dropped to one of the destinations. (This is just how `Stream.pipe()` works, sorry).
+This allows you to be more specific about how you want to forward/duplicate connections. You could even load-balance either one, or only duplicate a certain number of requests per minute, or whatever. Note, however, that all calls to `forward` or `duplicate` **must** be called in the same tick, or data could be dropped to one of the destinations. (This is just how `Stream.pipe()` works, sorry.)
 
 ## duplicator(cb)
 
@@ -48,12 +48,11 @@ Creates a new `net.Server` with two special properties:
 * when `cb` is called on a successful connection, it will receive the connection to the client and two special callback functions, `forward` and `duplicate` (more on those below)
 * two extra methods on the server, `forward` and `duplicate`, which cause the server to automatically invoke the corresponding callback function on every connection
 
-In general, you should only use either the callbacks or the methods. However, you can combine them:
+In general, you will use either the callbacks or the methods. However, they can be combined:
 
 ```js
 duplicator(function(connection, forward, duplicate){
-  var host = (Math.random() < 0.5) ? 'host1:80' : 'host2:80'
-  duplicate(host)
+  duplicate(Math.random() < 0.5 ? 'host1:80' : 'host2:80')
 }).forward('origin:80')
 ```
 
@@ -70,7 +69,7 @@ duplicator(function(connection, forward, duplicate){
 })
 ```
 
-Note that it is *not* safe to call `forward` multiple times on a connection, as the responses from the different servers may interfere with one another. Therefore if you do call `forward` multiple times, only the first will succeed, and subsequent calls will merely duplicate the connection.
+Note that it is *not* safe to forward the same connection multiple times, as the responses from the different servers may interfere with one another. Therefore if you do call `forward` multiple times, only the first call will succeed, and subsequent calls will merely duplicate the connection.
 
 ## server.forward(host)
 
@@ -86,7 +85,7 @@ With `server.forward`, multiple calls will simply overwrite the previous forward
 ```js
 var count = 0
 var server = duplicator(function() {
-  if (++count > 1000) server.forward('secondary:3000')
+  if (++count == 1000) server.forward('secondary:80')
 }).forward('primary:80')
 ```
 
@@ -108,6 +107,8 @@ Note that both `stream` and `rate` are optional, but have sensible defaults. If 
 duplicator(function(connection, forward, duplicate){
   // duplicate 50% of requests to localhost:3000
   duplicate('localhost:3000', 0.5)
+  // duplicate all connections to stdout
+  duplicate('localhost:3000', process.stdout)
 })
 ```
 
@@ -120,7 +121,7 @@ Convenience method to tell the server to call `duplicate(host, rate)` on every c
 duplicator().duplicate('localhost:3000', 0.5)
 ```
 
-As with `server.forward`, the last call sets the destination.
+As with `server.forward`, the last call sets the destination. If you want to forward to multiple destinations, use the callback form.
 
 ## specifying hosts
 
