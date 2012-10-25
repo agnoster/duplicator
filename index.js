@@ -1,13 +1,24 @@
 var net = require('net')
   , BufferedStream = require('morestreams').BufferedStream
 
-// Return a function that behaves like a net.connect to a given host
+/**
+ * Internal: Return a function that behaves like a net.connect to a given host
+ */
 function makeConnect(host) {
   return function(cb) {
     return net.connect(host, cb)
   }
 }
 
+/**
+ * Internal: Parse a host definition
+ *
+ * host - may be defined in different ways, here are some valid hosts:
+ *        'localhost', 'foo.net:80', { host: 'bar.org', port: 3000 }, 8080,
+ *        { port: 8080}, function(cb){ return net.connect({ port: 8000 }, cb }
+ *
+ * Returns a function like net.connect(host, cb)
+ */
 function parseHost(host) {
   switch(typeof host) {
     case 'function':
