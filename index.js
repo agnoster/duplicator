@@ -91,9 +91,11 @@ function duplicator(cb) {
     // back to the original connection if forwardResponse is truthy
     connect(host, function(err, connection) {
       if (err) {
-        if (forwardResponse) console.error(ERR_MSG.FWD_CONN_ERROR, err)
+        if (forwardResponse) {
+          console.error(ERR_MSG.FWD_CONN_ERROR, err)
+          client.end()
+        }
         buffer.end()
-        client.end()
         return
       }
       if (forwardResponse) connection.pipe(client)
