@@ -15,6 +15,8 @@ duplicator -f localhost:80 -d localhost:3000 -p 8080
 * duplicate all traffic to `localhost:3000`, ignoring responses
 * listen on port `8080`
 
+Note: the cli automatically uses the cluster API to run several workers to handle connections, and restart workers if they die.
+
 # usage (code)
 
 The equivalent to the call above, in node.js:
@@ -85,5 +87,11 @@ A host can be any one of:
 * a number representing a port (`80`, `3000`), host is implied to be `localhost`
 * a string representing a host (`localhost:3000`, `google.com:80`)
 * a function that behaves like `net.connect` (`function(cb) { net.connect({ port:80 }, cb) }`)
+
+# contributing and attribution
+
+Thanks to @netroy for contributing the cluster support!
+
+If you'd like to contribute, please open a pull request or file an issue.
 
 # mit license
