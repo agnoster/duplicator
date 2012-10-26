@@ -1,6 +1,6 @@
 {
   "name": "duplicator",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "TCP proxy that also duplicates traffic to a secondary host",
   "main": "index.js",
   "scripts": {
