@@ -72,7 +72,7 @@ if (cluster.isMaster) {
 
   serverInfo()
 
-  cluster.on('death', function(worker) {
+  cluster.on('exit', function(worker) {
     log('worker ' + worker.pid + ' died. spawning a new process...')
     delete workers[worker.pid]
     spawn(argv)
