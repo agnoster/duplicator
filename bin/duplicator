@@ -48,7 +48,7 @@ if (cluster.isMaster) {
         }
 
         if (!argv.p) throw 'You must specify a port, either via the -p option or' +
-          'in the PORT environment variable or'
+          'in the PORT environment variable'
 
         if (!argv.f) throw 'You must specify a host to forward to with -f option'
       })
