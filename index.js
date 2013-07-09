@@ -68,6 +68,8 @@ function duplicator(cb) {
     connection.on('error', function(err) {
       cb(err)
     })
+
+    return connection
   }
 
   /**
@@ -89,7 +91,7 @@ function duplicator(cb) {
 
     // Connect to the host and pipe the buffer into it, piping the response
     // back to the original connection if forwardResponse is truthy
-    connect(host, function(err, connection) {
+    return connect(host, function(err, connection) {
       if (err) {
         if (forwardResponse) {
           console.error(ERR_MSG.FWD_CONN_ERROR, err)
@@ -122,9 +124,9 @@ function duplicator(cb) {
     function forward(host, stream) {
       if (wasConnectionForwarded) {
         console.error(ERR_MSG.MULTIPLE_FWD)
-        pipe(stream || client, host, false)
+        return pipe(stream || client, host, false)
       } else {
-        pipe(stream || client, host, wasConnectionForwarded = true)
+        return pipe(stream || client, host, wasConnectionForwarded = true)
       }
     }
 

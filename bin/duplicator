@@ -3,7 +3,7 @@
 
 var cluster = require('cluster')
 var colors = require('colors')
-var log = console.log.bind(console, '[Cluster]'.blue)
+var log = console.error.bind(console, '[Cluster]'.blue)
 
 if (cluster.isMaster) {
 
@@ -34,6 +34,9 @@ if (cluster.isMaster) {
         { alias: 'rate'
         , describe: 'rate to sample traffic'
         , 'default': 1
+        })
+      .options('stdout',
+        { describe: 'Send copy of traffic (both ways) to stdout'
         })
       .check(function(argv){
         if (argv.h) throw ''
@@ -81,13 +84,18 @@ if (cluster.isMaster) {
 } else {
 
   var duplicator = require('../')
-  log = console.log.bind(console, '[Worker]'.green)
+  log = console.error.bind(console, '[Worker]'.green)
   process.on('message', function(argv) {
     log('worker started with pid', process.pid)
 
     var server = duplicator(function(client, forward, duplicate) {
-      if (argv.f) forward(argv.f)
+      var dest
+      if (argv.f) dest = forward(argv.f)
       if (argv.d) duplicate(argv.d, argv.r)
+      if (argv.stdout) {
+        dest.pipe(process.stdout)
+        client.pipe(process.stdout)
+      }
     })
     server.listen(argv.p)
   })
