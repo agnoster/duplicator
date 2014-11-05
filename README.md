@@ -8,12 +8,13 @@ I built this because I needed a way to "tap" production traffic and shoot it at 
 
 ```
 npm install -g duplicator
-duplicator -f localhost:80 -d localhost:3000 -p 8080
+duplicator -f localhost:80 -d localhost:3000 -p 8080 [-i 127.0.0.1]
 ```
 
 * forward all traffic to `localhost:80`
 * duplicate all traffic to `localhost:3000`, ignoring responses
 * listen on port `8080`
+* if -i is specified only listen to incoming traffic for ip address 127.0.0.1
 
 Note: the cli automatically uses the cluster API to run several workers to handle connections, and restart workers if they die.
 
@@ -27,7 +28,7 @@ var duplicator = require('duplicator')
 var server = duplicator(function(connection, forward, duplicate) {
   forward('localhost:80')
   duplicate('localhost:3000')
-}).listen(8080)
+}).listen(8080, ["127.0.0.1"])
 ```
 
 # reference

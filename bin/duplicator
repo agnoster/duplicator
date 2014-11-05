@@ -22,6 +22,10 @@ if (cluster.isMaster) {
         , describe: 'port to listen on, defaults to PORT'
         , 'default': process.env['PORT']
         })
+      .options('i',
+        { alias: 'interface'
+        , describe: 'ip address to listen on, defaults to INADDR_ANY'
+        })
       .options('f',
         { alias: 'forward'
         , describe: 'host to forward to'
@@ -52,6 +56,7 @@ if (cluster.isMaster) {
 
   function serverInfo() {
     log("Listening on port:", argv.p)
+    if (argv.i) log("Listening on interface:", argv.i)
     if (argv.f) log("Forwarding to:", argv.f)
     if (argv.d) log("Duplicating to:", argv.d)
     if (argv.r) log("Sample rate:", argv.r)
@@ -89,6 +94,6 @@ if (cluster.isMaster) {
       if (argv.f) forward(argv.f)
       if (argv.d) duplicate(argv.d, argv.r)
     })
-    server.listen(argv.p)
+    server.listen(argv.p, argv.i)
   })
 }
