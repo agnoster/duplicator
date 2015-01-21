@@ -1,5 +1,5 @@
 var net = require('net')
-  , BufferedStream = require('morestreams').BufferedStream
+  , BufferedStream = require('bufferedstream')
 
 var ERR_MSG =
   { MULTIPLE_FWD:

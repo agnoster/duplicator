@@ -18,9 +18,9 @@
   "author": "Isaac Wolkerstorfer <i@agnoster.net> (http://agnoster.net/)",
   "license": "MIT",
   "dependencies": {
-    "optimist": "~0.3.5",
+    "bufferedstream": "^3.1.0",
     "colors": "0.6.0-1",
-    "morestreams": "~0.1.1"
+    "optimist": "~0.3.5"
   },
   "devDependencies": {
     "tap": "~0.3.1"
